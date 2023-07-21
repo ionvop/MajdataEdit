@@ -155,6 +155,7 @@ namespace MajdataEdit
                 //Ionvop
                 double returnTime = -1;
                 List<string[]> labels = new List<string[]>();
+                List<string[]> colHSpeed = new List<string[]>();
 
                 for (int i = 0; i < text.Length; i++)
                 {
@@ -247,6 +248,55 @@ namespace MajdataEdit
                         continue;
                     }
 
+                    //Ionvop
+                    if (text[i] == 'C')
+                    {
+                        haveNote = false;
+                        noteTemp = "";
+                        string col = "";
+
+                        if (text[i + 1] == 'H' && text[i + 2] == 'S' && text[i + 3] == '*')
+                        {
+                            i += 4;
+                            Xcount += 4;
+                        }
+
+                        while (text[i] != ',')
+                        {
+                            col += text[i];
+                            i++;
+                            Xcount++;
+                        }
+
+                        string hs_s = "";
+                        i++;
+                        Xcount++;
+
+                        while (text[i] != '>')
+                        {
+                            hs_s += text[i];
+                            i++;
+                            Xcount++;
+                        }
+
+                        if (float.Parse(hs_s) == 1)
+                        {
+                            colHSpeed.RemoveAll(x => x[0] == col);
+                            continue;
+                        }
+
+                        if (colHSpeed.Exists(x => x[0] == col))
+                        {
+                            colHSpeed.Find(x => x[0] == col)[1] = hs_s;
+                        }
+                        else
+                        {
+                            colHSpeed.Add(new string[] { col, hs_s });
+                        }
+
+                        continue;
+                    }
+
                     if (i-1 < position)
                     {
                         requestedTime = time;
@@ -322,21 +372,6 @@ namespace MajdataEdit
 
                         if (haveNote)
                         {
-                            //Ionvop
-                            //if (noteTemp.Contains('\''))
-                            //{
-                            //    string[] fakeEachList = noteTemp.Split('\'');
-                            //    double fakeTime = time;
-                            //    double timeInterval = (1d / (bpm / 60d)) * 4d / (double)beats;
-
-                            //    foreach (string fakeEachGroup in fakeEachList)
-                            //    {
-                            //        Console.WriteLine(fakeEachGroup);
-                            //        _notelist.Add(new SimaiTimingPoint(fakeTime, Xcount, Ycount, fakeEachGroup, bpm, curHSpeed));
-                            //        fakeTime += timeInterval;
-                            //    }
-                            //}
-
                             if (noteTemp.Contains('`'))
                             {
                                 // 伪双
@@ -352,7 +387,15 @@ namespace MajdataEdit
                             }
                             else
                             {
-                                _notelist.Add(new SimaiTimingPoint(time, Xcount, Ycount, noteTemp, bpm, curHSpeed));
+                                string col = "" + noteTemp[0];
+                                float tempHS = curHSpeed;
+
+                                if (colHSpeed.Exists(x => x[0] == col))
+                                {
+                                    tempHS = float.Parse(colHSpeed.Find(x => x[0] == col)[1]);
+                                }
+
+                                _notelist.Add(new SimaiTimingPoint(time, Xcount, Ycount, noteTemp, bpm, tempHS));
                             }
                             //Console.WriteLine("Note:" + noteTemp);
                             
@@ -523,6 +566,12 @@ namespace MajdataEdit
 
                 notesContent = notesContent.Replace("hs*" + temp + ">", "");
                 HSpeed = float.Parse(temp);
+            }
+
+            if(notesContent.Contains("ii"))
+            {
+                notesContent = notesContent.Replace("ii", "");
+                HSpeed = -1000f;
             }
 
             if (notesContent.Contains("i"))
