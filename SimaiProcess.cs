@@ -152,6 +152,10 @@ namespace MajdataEdit
                 string noteTemp = "";
                 int Ycount=0, Xcount = 0;
 
+                //Ionvop
+                double returnTime = -1;
+                List<string[]> labels = new List<string[]>();
+
                 for (int i = 0; i < text.Length; i++)
                 {
                     if (text[i] == '|' && i+1 < text.Length && text[i+1] == '|')
@@ -176,6 +180,73 @@ namespace MajdataEdit
                     {
                         Xcount++;
                     }
+
+                    //Ionvop
+                    if (text[i] == 'l')
+                    {
+                        haveNote = false;
+                        noteTemp = "";
+                        string temp = "";
+
+                        if (text[i + 1] == 'a' && text[i + 2] == 'b' && text[i + 3] == 'e' && text[i + 4] == 'l' && text[i + 5] == ':')
+                        {
+                            i += 6;
+                            Xcount += 3;
+                        }
+
+                        for (int j = 0; j < 100; j++)
+                        {
+                            if (text[i] == ';')
+                            {
+                                break;
+                            }
+
+                            temp += text[i];
+                            i++;
+                            Xcount++;
+                        }
+
+                        temp = temp.Trim();
+                        labels.Add(new string[] { temp, "" + time });
+                        continue;
+                    }
+
+                    //Ionvop
+                    if (text[i] == 'g')
+                    {
+                        haveNote = false;
+                        noteTemp = "";
+                        string temp = "";
+
+                        if (text[i + 1] == 'o' && text[i + 2] == 't' && text[i + 3] == 'o' && text[i + 4] == ':')
+                        {
+                            i += 5;
+                            Xcount += 5;
+                        }
+
+                        for (int j = 0; j < 100; j++)
+                        {
+                            if (text[i] == ';')
+                            {
+                                break;
+                            }
+
+                            temp += text[i];
+                            i++;
+                            Xcount++;
+                        }
+
+                        temp = temp.Trim();
+
+                        if (labels.Exists(x => x[0] == temp))
+                        {
+                            string[] temp2 = labels.Find(x => x[0] == temp);
+                            time = double.Parse(temp2[1]);
+                        }
+
+                        continue;
+                    }
+
                     if (i-1 < position)
                     {
                         requestedTime = time;
@@ -245,10 +316,27 @@ namespace MajdataEdit
                     {
                         noteTemp += text[i];
                     }
-                    if (text[i] == ',')
+                    if (text[i] == ',' || text[i] == '\'')
                     {
+                        char delimiter = text[i];
+
                         if (haveNote)
                         {
+                            //Ionvop
+                            //if (noteTemp.Contains('\''))
+                            //{
+                            //    string[] fakeEachList = noteTemp.Split('\'');
+                            //    double fakeTime = time;
+                            //    double timeInterval = (1d / (bpm / 60d)) * 4d / (double)beats;
+
+                            //    foreach (string fakeEachGroup in fakeEachList)
+                            //    {
+                            //        Console.WriteLine(fakeEachGroup);
+                            //        _notelist.Add(new SimaiTimingPoint(fakeTime, Xcount, Ycount, fakeEachGroup, bpm, curHSpeed));
+                            //        fakeTime += timeInterval;
+                            //    }
+                            //}
+
                             if (noteTemp.Contains('`'))
                             {
                                 // 伪双
@@ -272,6 +360,22 @@ namespace MajdataEdit
                         }
                         _timinglist.Add(new SimaiTimingPoint(time,Xcount,Ycount,"",bpm));
 
+                        //Ionvop
+                        if (delimiter == '\'')
+                        {
+                            if (returnTime == -1)
+                            {
+                                returnTime = time;
+                            }
+                        }
+                        else
+                        {
+                            if (returnTime != -1)
+                            {
+                                time = returnTime;
+                                returnTime = -1;
+                            }
+                        }
 
                         time += (1d / (bpm / 60d)) * 4d / (double)beats;
                         //Console.WriteLine(time);
@@ -338,6 +442,94 @@ namespace MajdataEdit
             notesContent = _content.Replace("\n","").Replace(" ","");
             currentBpm = bpm;
             HSpeed = _hspeed;
+
+            if (notesContent.Contains("###"))
+            {
+                int pos = notesContent.IndexOf("###");
+
+                for (int i = 0; i < 10; i++)
+                {
+                    pos--;
+
+                    if (notesContent[pos] == '[')
+                    {
+                        break;
+                    }
+                }
+
+                string temp = "";
+
+                for (int i = 0; i < 10; i++)
+                {
+                    pos++;
+
+                    if (notesContent[pos] == '#')
+                    {
+                        break;
+                    }
+
+                    temp += notesContent[pos];
+                }
+
+                double waitingTime = (240d / bpm) * (Double.Parse(temp.Split(':')[1]) / Double.Parse(temp.Split(':')[0]));
+
+                for (int i = 0; i < 10; i++)
+                {
+                    pos++;
+
+                    if (notesContent[pos] != '#')
+                    {
+                        break;
+                    }
+                }
+
+                temp = "";
+                pos--;
+
+                for (int i = 0; i < 10; i++)
+                {
+                    pos++;
+
+                    if (notesContent[pos] == ']')
+                    {
+                        break;
+                    }
+
+                    temp += notesContent[pos];
+                }
+
+                double tracingLength = (240d / bpm) * (Double.Parse(temp.Split(':')[1]) / Double.Parse(temp.Split(':')[0]));
+
+                notesContent = notesContent.Substring(0, notesContent.IndexOf("[") + 1);
+                notesContent += waitingTime + "##" + tracingLength + "]";
+            }
+
+            if (notesContent.Contains("hs*"))
+            {
+                int pos = notesContent.IndexOf("hs*") + 2;
+                string temp = "";
+                
+                for (int i = 0; i < 10; i++)
+                {
+                    pos++;
+
+                    if (notesContent[pos] == '>')
+                    {
+                        break;
+                    }
+
+                    temp += notesContent[pos];
+                }
+
+                notesContent = notesContent.Replace("hs*" + temp + ">", "");
+                HSpeed = float.Parse(temp);
+            }
+
+            if (notesContent.Contains("i"))
+            {
+                notesContent = notesContent.Replace("i", "");
+                HSpeed = 1000f;
+            }
         }
 
         public List<SimaiNote> getNotes()
